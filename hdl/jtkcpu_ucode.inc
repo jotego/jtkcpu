@@ -1,6 +1,11 @@
 localparam UCODE_DW = 60;
 localparam OPCAT_AW = 6;
 localparam UCODE_AW = OPCAT_AW+3;
+
+reg [UCODE_DW-1:0] mem[0:2**(UCODE_AW-1)], ucode;
+reg [UCODE_AW-1:0] addr; // current ucode position read
+reg [OPCAT_AW-1:0] opcat, post_idx, nx_cat, idx_cat;
+
 localparam [OPCAT_AW-1:0] 
         RESET            = 'o0,
         FIRQ             = 'o1,

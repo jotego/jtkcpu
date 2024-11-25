@@ -105,14 +105,6 @@ module jtkcpu_ucode(
     output reg       irq_bsy    // set as output to preven a Quartus warning
 );
 
-`include "jtkcpu.inc"
-`include "jtkcpu_ucode.inc"
-
-localparam [UCODE_AW-OPCAT_AW-1:0] OPLEN=0;
-
-reg [UCODE_DW-1:0] mem[0:2**(UCODE_AW-1)], ucode;
-reg [UCODE_AW-1:0] addr; // current ucode position read
-reg [OPCAT_AW-1:0] opcat, post_idx, nx_cat, idx_cat;
 reg          [3:0] cur_int;
 reg                idx_postl, nil, niuzl, idx_ind_rq;
 reg                nmin_l, do_nmi;
@@ -123,6 +115,11 @@ wire               uc_loop, set_fake_irq, eff_irqn;
 reg                fake_irq, clr_fake_irq; // fake irq is used on the custom
                     // BSWI instruction, which mixes a branch with a SWI
                     // and is helpful for debugging game problems
+
+`include "jtkcpu.inc"
+`include "jtkcpu_ucode.inc"
+
+localparam [UCODE_AW-OPCAT_AW-1:0] OPLEN=0;
 
 assign cc_i = cc[CC_I];
 assign cc_f = cc[CC_F];
