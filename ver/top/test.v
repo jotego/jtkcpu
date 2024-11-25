@@ -16,6 +16,7 @@ wire [ 7:0] cpu_dout, upper_lines;
 reg  [ 1:0] cen_cnt=0;
 reg         sim_good, simctrl_cs, ram_cs;
 wire [23:0] cpu_addr;
+wire        cpu_we;
 integer     f, fcnt, finish_cnt=-1;
 
 assign cen2 =  cen_cnt[0];

@@ -199,7 +199,10 @@ always @(posedge clk,posedge rst) begin
 func make_params( all elements ) (s string) {
 	s += fmt.Sprintf("localparam UCODE_DW = %d;\n",len(all.mnemonics))
 	s += fmt.Sprintf("localparam OPCAT_AW = %d;\n",int(math.Ceil(math.Log2(float64(len(all.labels))))) )
-	s += fmt.Sprintf("localparam UCODE_AW = OPCAT_AW+%d;\n", int(math.Log2(float64(MAX_ROUTINE))) )
+	s += fmt.Sprintf("localparam UCODE_AW = OPCAT_AW+%d;\n\n", int(math.Log2(float64(MAX_ROUTINE))) )
+	s += fmt.Sprintf("reg [UCODE_DW-1:0] mem[0:2**(UCODE_AW-1)], ucode;\n" )
+	s += fmt.Sprintf("reg [UCODE_AW-1:0] addr; // current ucode position read\n" )
+	s += fmt.Sprintf("reg [OPCAT_AW-1:0] opcat, post_idx, nx_cat, idx_cat;\n\n" )
 	s += fmt.Sprintf("localparam [OPCAT_AW-1:0] " )
 	first := true
 	sorted := make([]string,len(all.labels))
