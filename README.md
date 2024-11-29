@@ -44,3 +44,19 @@ Memory bits     | 12,800
 Multipliers     |      3
 
 Fmax > 70 MHz
+
+# Current Issue
+
+The CPU is not finishing processes during blanking, leading to some gaps in lines (reported in [#787](https://github.com/jotego/jtcores/issues/787))
+
+(29/11/2024)
+Using the 96MHz clock, the ALU is not able to finish calculations in time, leading to compilation errors.
+
+To fix this, I tried registering the result obtained in the ALU and delaying other processes adding one clock enable before the result is stored. I tried this through the alu_busy signal, but this does not stop the count of addr in the ucode module.
+Important signals like ni (new instruction) are dependent on the addr value, and, for shorter programs, for example, trying to add a cen cycle this ways leads to ni activating before the correct ALU-result can be stored.
+
+Without delaying the rest of the CPU, the slack obtained in the timing report for compiling registering while registering the ALU outputs on a flip flop is -5.382 ns. The report indicated issues with z_out in cc_out, so we tried registering everything else but that bit, solving that issue but letting others show up.
+
+Using another approach to decrease calculation time, I tried simplifying the ALU mux by unifying all op values leading to the same calculations in a single register that enables or disables the processes in continuous assignment. Setup slack obtained was around -6.437, indicating that this registration of op should probably be also done in other modules for this to work.
+
+It would entail several changes for the CPU to work at 96MHz, meanwhile, it is being used in other games without problems with 48 MHz. We will try the other approach (working with cen==1), to check if it might be a better solution
