@@ -60,3 +60,11 @@ Without delaying the rest of the CPU, the slack obtained in the timing report fo
 Using another approach to decrease calculation time, I tried simplifying the ALU mux by unifying all op values leading to the same calculations in a single register that enables or disables the processes in continuous assignment. Setup slack obtained was around -6.437, indicating that this registration of op should probably be also done in other modules for this to work.
 
 It would entail several changes for the CPU to work at 96MHz, meanwhile, it is being used in other games without problems with 48 MHz. We will try the other approach (working with cen==1), to check if it might be a better solution
+
+
+(20/12/2024)   
+In the branch `cenwait` in commit [45926b7](https://github.com/jotego/jtkcpu/commit/45926b7e8d73635d0c763741c381e546a738fc6d), we can find another approach to solve the issue. With these small changes, the cpu can also run using a fixed or variable cen input.
+
+The jtframe_gated_cen module usually compensates pauses after a busy state with a faster cen output to keep the average as intended. However, when the intended cen is half of the clock's frequency (as it is the case in mentioned #787), this compensation is not possible, due to it being designed to not send out two cen signals in a row. To test the changes applied in the mentioned commit, a similar approach removing the blockage has been used, so several cen output signals can be active in a row if necessary.
+
+In `cenwait` ([45926b7](https://github.com/jotego/jtkcpu/commit/45926b7e8d73635d0c763741c381e546a738fc6d)), when input cen==1, a wait state is added every time the address is changed. This allows the processes in the ALU to finish before the next cen/cen2 cycle. Nevertheless, always adding a wait state independently from the operation causes only ~10% speed increase for a 48MHz 100% duty cycle clock versus a 48MHz 50% duty cycle (cen=50%) case. The wait states take away most of the gain from doubling the duty cycle. This is not enough to fix the issue reported in #787
