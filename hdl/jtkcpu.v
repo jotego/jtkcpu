@@ -16,7 +16,7 @@
     Version: 1.0
     Date: 14-02-2023 */
 
-/* verilator tracing_off */
+/* verilator tracing_on */
 module jtkcpu(
     input               rst,
     input               clk,
@@ -84,7 +84,22 @@ wire        idx_post, idx_pre, idxw,  idx_ld, idx_en,
 
 reg         clken=0 ,
             clken2=0,
+            clken2_pre=0,
+            phase2=0,
             phase=0;
+
+reg [23:0]  addr_l;
+reg         cen2_l, wait_st;
+
+always @(posedge clk) begin
+    cen2_l   <= cen2;
+    if( clken2_pre ) addr_l <= addr;
+end
+
+always @(*) begin
+    wait_st = cen2_l && addr!=addr_l;
+    clken   = clken2 && phase2;
+end
 
 assign cen_out = clken2;
 
@@ -92,8 +107,9 @@ always @(negedge clk) begin
     if( dtack & cen2 ) begin
         phase <= ~phase;
     end
-    clken  <= cen2 & dtack & phase;
-    clken2 <= cen2 & dtack;
+    clken2 <= cen2 & ( dtack & ~wait_st );
+    clken2_pre <= cen2 & phase;
+    if( cen2 & ( dtack & ~wait_st ) ) phase2 <= ~phase2;
 end
 
 jtkcpu_ctrl u_ctrl(

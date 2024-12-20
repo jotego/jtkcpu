@@ -19,7 +19,8 @@ wire [23:0] cpu_addr;
 wire        cpu_we;
 integer     f, fcnt, finish_cnt=-1;
 
-assign cen2 =  cen_cnt[0];
+assign cen2 =  1'b1;
+// assign cen2 =  cen_cnt[0];
 assign upper_lines = cpu_addr[23:16];
 
 initial begin
@@ -54,8 +55,8 @@ integer idly=-1;
 reg irq_dly, nmi_dly, firq_dly;
 
 always @(posedge clk) if(cen2) begin
-    if( simctrl_cs && cpu_we ) idly <= $abs($random)%100;
     if( idly>=0 ) idly<=idly-1;
+    if( simctrl_cs && cpu_we ) idly <= 2*$abs($random)%100;
     irq_dly  <= irq  && ( irq_dly || idly==0);
     firq_dly <= firq && (firq_dly || idly==0);
     nmi_dly  <= nmi  && ( nmi_dly || idly==0);
@@ -89,17 +90,24 @@ always @(posedge clk) begin
 end
 
 always @* begin
-    cpu_din    = 0;
     simctrl_cs = 0;
     ram_cs     = 0;
     casez( cpu_addr[15:0] )
         16'h0???: begin
-            cpu_din = ram[cpu_addr[11:0]];
             ram_cs  = 1;
         end
         16'h1??0: simctrl_cs = 1;
-        16'h1??1: cpu_din = cpu_addr[23:16];
-        16'hf???: cpu_din = rom[cpu_addr[11:0]];
+    endcase
+end
+
+always @(posedge clk) begin
+    cpu_din  <= 0;
+    casez( cpu_addr[15:0] )
+        16'h0???: begin
+            cpu_din <= ram[cpu_addr[11:0]];
+        end
+        16'h1??1: cpu_din <= cpu_addr[23:16];
+        16'hf???: cpu_din <= rom[cpu_addr[11:0]];
     endcase
 end
 
