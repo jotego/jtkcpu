@@ -1,0 +1,12 @@
+jtkcpu:
+  - get:
+    - jtkcpu_alu.v
+    - jtkcpu_branch.v
+    - jtkcpu_ctrl.v
+    - jtkcpu_div.v
+    - jtkcpu_idx.v
+    - jtkcpu_memctrl.v
+    - jtkcpu_pshpul.v
+    - jtkcpu_regs.v
+    - jtkcpu_ucode.v
+    - jtkcpu.v
