@@ -13,8 +13,14 @@ idx1        | ,R
 --          | DP - Needs psh/pul first
 idx2        | ,R + A
 idx2        | ,R + B
+idx_regoff  | ,R + X
+idx_regoff  | ,R + Y
+idx_regoff  | ,R + U
+idx_regoff  | ,R + S
 idx4        | ,R + D
+idx_regoff  | ,R + D
 idx4        | indirect
+idx_regoff  | indirect register offset
 idx1        | X
 idx1        | Y
 idx3        | U

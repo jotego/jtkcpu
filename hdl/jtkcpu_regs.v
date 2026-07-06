@@ -80,7 +80,7 @@ module jtkcpu_regs(
     // Index addressing
     input        [15:0] idx_addr,
     input        [ 2:0] idx_rsel,   // register to modify
-    input        [ 1:0] idx_asel,   // accumulator used
+    input        [ 2:0] idx_asel,   // accumulator/register offset used
     input               idx_post,
     input               idx_pre,
     input               idxw,
@@ -126,7 +126,12 @@ assign idx_x     = idx_rsel==2,
        idx_s     = idx_rsel==6,
        idx_pc    = idx_rsel==7;
 assign idx_reg   = idx_x ? x : idx_y ? y : idx_u ? u : idx_s ? s : pc;
-assign idx_racc  = idx_asel==0 ? { {8{a[7]}},a } : idx_asel==1 ? { {8{b[7]}},b } : { a, b };
+assign idx_racc  = idx_asel==0 ? { {8{a[7]}},a } :
+                   idx_asel==1 ? { {8{b[7]}},b } :
+                   idx_asel==2 ? x :
+                   idx_asel==3 ? y :
+                   idx_asel==5 ? u :
+                   idx_asel==6 ? s : { a, b };
 assign idx_upx   = (idx_post || idx_pre) && idx_x,
        idx_upy   = (idx_post || idx_pre) && idx_y,
        idx_upu   = (idx_post || idx_pre) && idx_u,

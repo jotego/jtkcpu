@@ -77,7 +77,7 @@ wire        alu_busy, mem_busy, stack_busy, str_busy;
 // Indexed addressing
 wire [15:0] idx_addr, idx_reg, idx_racc;
 wire [ 2:0] idx_rsel;
-wire [ 1:0] idx_asel;
+wire [ 2:0] idx_asel;
 wire        idx_post, idx_pre, idxw,  idx_ld, idx_en,
             idx_acc,  idx_adv, idx_8, idx_16, idx_dp,
             idx_pc,   data2addr, uz;
@@ -121,7 +121,7 @@ jtkcpu_ctrl u_ctrl(
     // Indexed addressing
     .idx_addr     ( idx_addr     ),
     .idx_rsel     ( idx_rsel     ),   // register to modify
-    .idx_asel     ( idx_asel     ),   // accumulator used
+    .idx_asel     ( idx_asel     ),   // accumulator/register offset used
     .idx_post     ( idx_post     ),
     .idx_pre      ( idx_pre      ),
     .idxw         ( idxw         ),
@@ -286,7 +286,7 @@ jtkcpu_regs u_regs(
 
     // Indexed addressing
     .idx_rsel     ( idx_rsel     ),   // register to modify
-    .idx_asel     ( idx_asel     ),   // accumulator used
+    .idx_asel     ( idx_asel     ),   // accumulator/register offset used
     .idx_reg      ( idx_reg      ),
     .idx_racc     ( idx_racc     ),
     .idx_addr     ( idx_addr     ),

@@ -39,7 +39,7 @@ module jtkcpu_ucode(
 
     // indexed addressing
     output reg [2:0] idx_rsel,
-    output reg [1:0] idx_asel,
+    output reg [2:0] idx_asel,
     output reg       idx_post,
     output reg       idx_acc,
     output reg       idx_ld,
@@ -138,8 +138,11 @@ always @* begin
         4'b1_100: idx_cat = IDX_DP;
         4'b1_000,
         4'b1_001,
+        4'b1_010,
+        4'b1_011,
+        4'b1_101,
+        4'b1_110,
         4'b1_111: idx_cat = IDX_ACC;
-        4'b1_010: idx_cat = IDX_UNK;
         default:  idx_cat = BUSERROR;
     endcase
 end
@@ -336,7 +339,7 @@ always @(posedge clk) begin
         if( idx_jmp ) begin
             addr       <= {idx_cat, OPLEN};
             idx_rsel   <= mdata[6:4];
-            idx_asel   <= mdata[1:0];
+            idx_asel   <= mdata[2:0];
             idx_ind_rq <= mdata[3];
             idxw       <= 0;
         end

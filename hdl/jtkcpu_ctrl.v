@@ -43,7 +43,7 @@ module jtkcpu_ctrl(
     // indexed addressing
     input     [15:0] idx_addr,
     output    [ 2:0] idx_rsel,
-    output    [ 1:0] idx_asel,
+    output    [ 2:0] idx_asel,
     output           idx_post,
     output           idx_pre,
     output           idxw,

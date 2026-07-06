@@ -87,8 +87,8 @@ IDX_EXT:            OPD, MEMHI                  # 7 Extended
 IDX_DP:             OPD                         # 1,4  - DP
                     IDX_DP, IDX_IND
 IDX_ACC:            NOP
-                    IDX_ACC=1, IDX_IND          # 1,other  - A, B or D
-IDX_UNK:            IDX_IND                     # 1,2 unknown. Seen in 08 A2 LEAX ????
+                    IDX_ACC=1, IDX_IND          # 1,other  - A, B, X, Y, U, S or D
+IDX_UNK:            IDX_IND                     # Reserved indexed category; invalid modes normally buserror
 
 ########## ALU OPERATIONS ##################
 SINGLE_ALU:         OPD
