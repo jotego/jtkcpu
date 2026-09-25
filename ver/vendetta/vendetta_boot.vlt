@@ -1,0 +1,80 @@
+// SPDX-FileCopyrightText: 2026 Jose Tejada Gomez
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Simulation-only bind, loaded through jtsim's local game.vlt hook.
+`verilog
+module vendetta_boot_monitor(
+    input         clk, rst, cen, we, lvbl,
+    input [15:0]  addr,
+    input [7:0]   dout
+);
+localparam integer WD_LIMIT = 480000; // 10 ms at 48 MHz: conservative test budget
+
+integer watchdog_age=0, max_watchdog_age=0, kicks=0, irq_updates=0;
+integer ready_age=0;
+reg ready=0, seen_reset=0;
+reg [24:0] last_bus=25'h1ffffff;
+wire [24:0] bus_value;
+wire transfer;
+
+assign bus_value = {we,addr,dout};
+assign transfer = cen && bus_value!=last_bus;
+
+always @(posedge clk) begin
+    if(rst) begin
+        if(ready) $fatal(1,"BOOT FAIL: unexpected reset after READY");
+        seen_reset <= 1;
+        watchdog_age <= 0;
+        ready_age <= 0;
+        ready <= 0;
+        last_bus <= 25'h1ffffff;
+    end else if(seen_reset) begin
+        watchdog_age <= watchdog_age+1;
+        if(watchdog_age>max_watchdog_age) max_watchdog_age <= watchdog_age;
+        if(watchdog_age>=WD_LIMIT)
+            $fatal(1,"BOOT FAIL: no watchdog service within 10 ms");
+        if(ready) ready_age <= ready_age+1;
+        if(ready_age>4800000 && irq_updates<3)
+            $fatal(1,"BOOT FAIL: fewer than three IRQ updates in 100 ms");
+        if(ready_age==48000000) begin
+            if(irq_updates<50 || kicks<100)
+                $fatal(1,"BOOT FAIL: insufficient IRQ/watchdog activity");
+            $display("BOOT PASS: irq_updates=%0d kicks=%0d max_watchdog_gap=%0d clocks (%0d us)",
+                irq_updates,kicks,max_watchdog_age,max_watchdog_age/48);
+            $finish;
+        end
+        if(cen) last_bus <= bus_value;
+        if(transfer) begin
+            if(!we && addr==16'h5fea) begin
+                watchdog_age <= 0;
+                kicks <= kicks+1;
+            end
+            if(we && addr==16'h2010) begin
+                if(dout==8'he1 || dout==8'he2)
+                    $fatal(1,"BOOT FAIL: firmware error %02x",dout);
+                if(dout==8'ha5) begin
+                    ready <= 1;
+                    $display("BOOT READY: RAM verified, video initialized");
+                end
+            end
+            if(we && addr==16'h5fe2 && |dout[5:3])
+                $fatal(1,"BOOT FAIL: diagnostic attempted to drive EEPROM signals");
+            if(ready && we && addr==16'h2001) begin
+                if(lvbl) $fatal(1,"BOOT FAIL: IRQ outside vertical blank");
+                irq_updates <= irq_updates+1;
+            end
+            if(ready && we && addr>=16'h631a && addr<=16'h631d && lvbl)
+                $fatal(1,"BOOT FAIL: counter tile write outside vertical blank");
+        end
+    end
+end
+endmodule
+
+bind jtsimson_main vendetta_boot_monitor u_boot_monitor(
+    .clk    ( clk       ),
+    .rst    ( rst_cmb   ),
+    .cen    ( cpu_cen   ),
+    .we     ( cpu_we    ),
+    .lvbl   ( LVBL      ),
+    .addr   ( A         ),
+    .dout   ( cpu_dout  )
+);

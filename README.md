@@ -12,6 +12,10 @@ You can show your appreciation through
 
 # Game Library
 
+The [Vendetta bootstrap ROM](ver/vendetta/README.md) provides a watchdog-safe
+PCB bring-up program and a simson integration test for instruction-characterization
+work.
+
 The following games used the 052001 CPU as the main or sound processor. The set names and source files refer to the MAME emulator
 
 | Games                                 | Setname  | Source       | Audio                    | CPUs              | Video                  | Sch           |
