@@ -12,9 +12,13 @@ You can show your appreciation through
 
 # Game Library
 
-The [Vendetta bootstrap ROM](ver/vendetta/README.md) provides a watchdog-safe
-PCB bring-up program and a simson integration test for instruction-characterization
-work.
+The [physical PCB tools](ver/pcb/README.md) build, collect and analyze the
+Vendetta instruction-characterization probes.
+
+The [Vendetta bootstrap ROM](ver/vendetta/README.md) provides an initial
+bring-up program and a simson integration test. Physical testing subsequently
+found different watchdog and ROM-mapping requirements; see the
+[053248 PCB measurements](doc/pcb-053248.md) before using it on a board.
 
 The following games used the 052001 CPU as the main or sound processor. The set names and source files refer to the MAME emulator
 

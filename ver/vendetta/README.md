@@ -6,6 +6,15 @@ The address map comes from the Vendetta decoder in
 This is the bootstrap for later instruction characterization; it does not yet
 measure instruction timing/flags or implement PicoROM communications.
 
+## Physical validation status
+
+This original bootstrap has not yet been updated with the successful PCB
+bring-up findings. Its 256 KiB image layout and frequent watchdog accesses
+differ from the validated 128 KiB POG setup. It is not the ROM used for the
+physical instruction measurements. See [053248 PCB measurements](../../doc/pcb-053248.md)
+for the mapper initialization, address mask and spaced watchdog requirements.
+The simulation instructions and behavior below describe this original bootstrap.
+
 Use this repository as `modules/jtkcpu` in a JTCORES checkout. From the JTCORES
 checkout root:
 
@@ -26,8 +35,9 @@ The build creates a **256 KiB program-only image** at:
 tasks/jtkcpu-1/artifacts/bootstrap/vendetta_boot.bin
 ```
 
-This is the image intended for PicoROM, replacing the main program ROM while
-leaving the game graphics ROMs installed. It has no JTFRAME header. CPU fixed
+This legacy image is retained for the original simulation flow. For current
+PCB uploads, use the [physical characterization tools](../pcb/README.md).
+It has no JTFRAME header. CPU fixed
 ROM `$8000–$FFFF` occupies physical `$38000–$3FFFF`, with reset vector `$8000`
 at physical `$3FFFE`. The low bank is zero-filled, including the reserved
 PicoROM communications page at physical `$01C00–$01FFF`.
@@ -107,33 +117,15 @@ The JTCORES baseline was `0486453041b5685f8d53c406be9d3c4c0ff109c4`.
 Logs and the reviewed screen are local artifacts under
 `tasks/jtkcpu-1/artifacts/bootstrap/`; regenerate them on a new computer.
 
-## PicoROM handoff
+## Current PCB workflow
 
-On 2026-09-25 the image was uploaded to device `VENDETTA`
-(`E66430A64B572B21`), firmware 2.0, build `P32_27C020_70ns`, with a
-256 KiB address mask. A full download matched the uploaded image byte-for-byte:
+Use the [physical characterization tools](../pcb/README.md) for board uploads,
+communication and instruction measurements. They use the validated original
+POG variant, a128KiB image, original mapper setup, spaced watchdog service and
+watchdog-driven recovery while the reset lead remains disconnected.
 
-```
-03fa920b6803bf1bc8b8a9f872f5c6c5fc101784af5500cf70e4801e9ed62fbc
-```
-
-Reset was held low during upload and released to `z` afterward. The upload
-was volatile; repeat it after PicoROM loses power. With the same device and
-reset wiring connected, rebuild the image, then use:
-
-```sh
-picorom reset VENDETTA low
-picorom upload VENDETTA tasks/jtkcpu-1/artifacts/bootstrap/vendetta_boot.bin 2MBit
-picorom download VENDETTA tasks/jtkcpu-1/artifacts/bootstrap/readback.bin
-cmp tasks/jtkcpu-1/artifacts/bootstrap/vendetta_boot.bin tasks/jtkcpu-1/artifacts/bootstrap/readback.bin
-picorom reset VENDETTA z
-```
-
-First confirm the PCB shows the bootstrap screen with an advancing IRQ count
-and remains stable. Next bring up PicoROM communications before implementing
-instruction measurements; the full plan is on issue 1. In particular, the
-firmware's communications PIO uses control pins 20/21 from the original POG
-layout, so compatibility with this P32 device still needs investigation.
-Its A9–A16 comparison also aliases the proposed bank-0 communication triggers
-at physical `$21E00–$21FFF`. The experimental timer firmware repurposes A17
-and is not a drop-in replacement for this 256 KiB image.
+The historical September25 upload used P32 firmware and a256KiB image. The
+subsequent board work established that the physical device is POG; successful
+USB readback of that old image did not establish correct board operation.
+The original display bootstrap remains a simulation fixture and has not been
+physically validated. Its old reset-pin upload commands have been retired.
