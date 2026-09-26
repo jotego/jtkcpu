@@ -1,7 +1,8 @@
 # Physical 053248 characterization on Vendetta
 
 These sources reproduce the POG PicoROM transport, timing and flag probes used
-for [JTKCPU issue1](http://gitea.jotego.es/jotego/jtkcpu/issues/1).
+for [JTKCPU issue1](http://gitea.jotego.es/jotego/jtkcpu/issues/1) and the
+[unknown-opcode investigation](http://gitea.jotego.es/jotego/jtkcpu/issues/2).
 [Measurements and limitations](../../doc/pcb-053248.md) describe the observed
 053248 behavior, including differences from assembler/MAME/RTL interpretations.
 No game ROM assets are required by these program-ROM probes.
@@ -102,6 +103,47 @@ Sources cover the measured unary/binary/word, branch, control, stack, transfer,
 bank, multiply/divide and variable-shift families. Transfer mnemonics and
 selector labels must be interpreted using the research notes: the physical
 3E/3F behavior differs from the current assembler/RTL convention.
+
+## Additional opcode probes
+
+These tools use the same dependencies, output root and single-client USB rules.
+For a new run, choose a fresh `JTKCPU_PCB_OUT`; building a matching case replaces
+its generated files. Opcode arguments are hexadecimal.
+
+```sh
+python "$PCB_TOOLS/operand_probe.py" build 05 --variant extended
+python "$PCB_TOOLS/operand_probe.py" collect 05 --variant extended
+python "$PCB_TOOLS/operand_probe.py" analyze 05 --variant extended
+python "$PCB_TOOLS/memory_probe.py" build d1 --variant extended
+python "$PCB_TOOLS/memory_probe.py" collect d1 --variant extended
+python "$PCB_TOOLS/memory_probe.py" analyze d1 --variant extended
+```
+
+`operand_probe.py` returns registers and flags. Its manifest records the full
+suffix and initial register state. `memory_probe.py` adds a complete 256-byte
+scratch-page readback in 16 further CPU-CRC frames. `vector_probe.py` identifies
+the vector handler and reads the stack page; transient handler pushes lie below
+the entry stack pointer and do not overwrite the original frame. It accepts
+the same `build`, `collect`, `analyze` actions; use opcode 02/03/04/5d and
+variants `extended`, `extended-cc00` or `extended-ccff` for the measured cases.
+
+`unknown_timing.py` batches 0..2 compare 05/06/07/d1 with 08 in extended,
+direct-page and plain-X forms. `entry_timing.py` batches 0..3 compare raw
+02/03/04/5d entry with PSHS+JMP baselines and matched return handlers. Both use
+`build 0`, `collect 0`, `analyze 0` to operate on batch 0.
+
+`reset_probe.py` timestamps reset-vector entry using a RAM sentinel, with
+`build`, `collect`, `analyze` actions. Run a verified NOP recovery first to
+clear the sentinel. Measured controls are `ae --variant nop` (fallthrough) and
+`60 --variant watchdog` (deliberate wait). Opcode `00 --variant nop` tests
+immediate reset entry. Its marker interval includes setup/dispatch overhead;
+it is not an instruction cycle count or a register/flag characterization.
+
+Non-returning sequences remain unresolved: operands/postbytes may change their
+meaning. Inspect collection status before analysis; a failed/timeout capture is
+saved for investigation, not promoted to a valid result. To recover, build and
+collect `ae --variant nop` with `operand_probe.py`; verify its analysis passes.
+See [the datasheet](../../doc/053248.md) for measured semantics and coverage.
 
 ## Host verification
 
