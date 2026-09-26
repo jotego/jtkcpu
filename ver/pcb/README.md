@@ -161,3 +161,72 @@ from the validated development probes. Their table/body regions are replaced
 by family builders; they are not standalone board images. Keep their generated
 encoding and image checks when changing them. No production RTL changes are
 implied by these measurement tools.
+
+## Register, IRQ and stream follow-up (issue 3)
+
+The following tools use `JTKCPU_PCB_OUT` and the same POG setup. Use a fresh
+output directory for each campaign. Builders refuse to replace a captured
+case; collectors must run one at a time. Imports do not contact USB.
+
+| Tool                      | Probe / invocation                                                   |
+| ------------------------- | -------------------------------------------------------------------- |
+| `register_probe.py`       | `build`, `collect`, `analyze` followed by `control` or a named case  |
+| `transfer_matrix.py`      | `build`, `collect`, `analyze` followed by `3e`/`3f` and half `0`/`1` |
+| `pc_continuation.py`      | Run all twelve old-stream opcode / RAM destination cases             |
+| `dp_restore.py`           | Run eight PULS DP / full RTI hidden-byte cases                       |
+| `irq_probe.py`            | Run masked, enabled and pending board-IRQ cases                      |
+| `irq_wakeup.py`           | Run exact 01/D2/FF plus sixteen AE-byte sequences                    |
+| `irq_return.py`           | Compare unchanged versus redirected saved PC at RTI                  |
+| `irq_block.py`            | Run nine vblank-synchronized positive-count block cases              |
+| `block_zero.py`           | Run CF/D0/B6 with U=1 and U=0, CC5F                                  |
+| `stream_timing.py`        | Run ten batches: ROM/RAM, offsets 0/1, ten stream units              |
+| `audit_probe_capture.py`  | Offline: one or more `capture.json` paths                            |
+
+**The tools described as “Run” upload ROMs when executed directly.** For a
+build-only operation, import the module and call its `build` function; this
+assembles and packages files without opening USB. The helpers `pc_transfer`,
+`deferred_collect` and `irq_timed_collect` support those campaigns.
+
+Examples (after setting `PCB_TOOLS`, the Python environment and a fresh output
+root as above):
+
+```sh
+python "$PCB_TOOLS/transfer_matrix.py" build 3e 0
+python "$PCB_TOOLS/transfer_matrix.py" collect 3e 0
+python "$PCB_TOOLS/transfer_matrix.py" analyze 3e 0
+python "$PCB_TOOLS/audit_probe_capture.py" \
+  "$JTKCPU_PCB_OUT/artifacts/transfer-matrix/3e-0/capture.json"
+```
+
+Timestamped block-IRQ cases use `irq_block.TIMED=True` and
+`irq_timed_collect.collect(root, run)`, followed by `irq_probe.analyze`.
+Their trace starts with A0/A2/A3 before the ordinary result frame. The A2→A3
+interval includes the handlers and setup; it is not an instruction cycle count.
+For additional zero-count flags, set `block_zero.CC` to 50 or FF and set
+`block_zero.OUTPUT` to a fresh campaign name before `build(opcode, 0)`.
+
+Zero-count blocks can traverse the communication window. `deferred_collect`
+keeps capture disabled during execution, waits two seconds after ROM resume,
+then arms a fresh session and sends A5. The CPU reconstructs mapper/report
+state, consumes that request, emits A0 and reports. Its expected event trace
+includes the initial RX before A0. This establishes effects and flags but
+provides no duration for the block itself. The active-capture and early-arm
+attempts that overflowed are not valid timing measurements.
+
+The actual register encodings matter: assembler `TFR S,X` emits `3F 24`,
+which accesses the observed DP word, not S. The IRQ frame reader uses raw
+`3E A6`. Early development captures with that assembler mismatch retain an
+erratum and are excluded from frame-semantics claims. Early ROM-target probes
+also retain seed-metadata errata; use the corrected builders here.
+
+Physical evidence in `tasks/jtkcpu-3/artifacts/` is kept outside git. Seventy-seven
+images from these maintained builders reproduced the accepted campaign images
+byte for byte. The offline audit checks image/source hashes, CPU CRC and frame
+identity, complete event ordering, and loss/reset indicators. It does not turn
+a transport-valid capture with a documented probe error into valid semantic
+evidence. The research notes and datasheet identify each observation's scope.
+
+Vendetta's core ties NMI inactive and leaves FIRQ disabled; the user deferred
+those inputs' masking/priority measurements to a suitable later PCB. The real
+IRQ measurements here are independent of the earlier software-entry opcode
+measurements. Keep the PicoROM reset lead disconnected.
