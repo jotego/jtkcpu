@@ -1,11 +1,10 @@
 # Physical 053248 discrepancy regressions
 
-These cases encode individual observed PCB vectors from
-[the physical measurements](../../../../doc/pcb-053248.md). They are deliberately
-outside the ordinary `tests/*.asm` batch glob: six currently fail against
-JTKCPU RTL. Their expected results are the measured PCB values, not an expected
-failure inverted into a pass. Keep them failing until the corresponding RTL
-change is reviewed and implemented.
+These cases encode observed PCB vectors from
+[the physical measurements](../../../../doc/pcb-053248.md). They are outside
+the ordinary `tests/*.asm` batch glob. Their expected results are measured PCB
+values. Issue #4 implements the six initial flag corrections, the word-NEG
+flag correction found during the final audit, and opcode and transfer tests.
 
 From `ver/top`, run any case through the existing harness:
 
@@ -16,7 +15,21 @@ bash sim.sh --batch pcb/rol
 bash sim.sh --batch pcb/lmul
 bash sim.sh --batch pcb/div
 bash sim.sh --batch pcb/abs
+bash sim.sh --batch pcb/neg_word
 bash sim.sh --batch pcb/daa
+bash sim.sh --batch pcb/new_opcodes
+bash sim.sh --batch pcb/transfer_map
+bash sim.sh --batch pcb/transfer_pc
+bash sim.sh --batch pcb/transfer_pc_stream
+bash sim.sh --batch pcb/lea_zero_loop
+bash sim.sh --batch pcb/soft_reset
+bash sim.sh --batch pcb/soft_nmi
+bash sim.sh --batch pcb/soft_firq
+bash sim.sh --batch pcb/soft_irq
+bash sim.sh --batch pcb/soft_swi
+bash sim.sh --batch pcb/varshift_left
+bash sim.sh --batch pcb/varshift_right
+bash sim.sh --batch pcb/block_flags
 ```
 
 The test stack is in RAM at0800. Every target is followed immediately by
@@ -25,8 +38,8 @@ comparisons run before the CC comparison. The NOP control exercises the same
 capture/check path and passes. Existing sex/andcc/orcc/pshs tests also pass.
 The source comments identify the physical result file and zero-based row.
 
-At RTL baseline e34eebf (unchanged production RTL from3dbeda8), the observed
-outputs are:
+At RTL baseline e34eebf (unchanged production RTL from 3dbeda8), the six
+flag cases failed as follows. They now pass with the issue #4 corrections:
 
 | Case | Target input | Data result, PCB and RTL agree | PCB CC | RTL CC |
 | --- | --- | --- | --- | --- |
@@ -43,11 +56,9 @@ and incoming C persists on the PCB. Host extraction from the existing harness's
 RAM-write log verifies these mismatches rather than inferring the failure cause
 from a generic FAIL message.
 
-## Proposed correction scope
+## Implemented flag corrections
 
-Review `hdl/jtkcpu_alu.v` flag update enables and operation cases before applying
-these changes. The larger physical matrices, not these six vectors alone,
-support the rules:
+The larger physical matrices, not these six vectors alone, support the rules:
 
 - SEX: Z follows the generated sign-extension byte, not the full D result.
 - Byte ROL: preserve N/V; preserve Z when incoming C is set, otherwise use
@@ -60,7 +71,18 @@ support the rules:
 - DAA: H is the low-correction carry; use the measured conditional N/Z and
   C rules in the research document, rather than treating H as preserved.
 
-A correction should make its new case pass, retain relevant existing tests,
-and add any needed boundary cases from the recorded physical matrices.
-Transfer encodings and timing require separate decoder/microcode work; these
-flag regressions do not resolve them. No production RTL is changed here.
+The new opcode case covers LEAX 05-07 and flag-preserving CLR.NF. The transfer
+case covers both primary bytes with bit-7-selected copy/exchange and the full
+DP-related word. The PC transfer case checks PC readback and branch to a new
+instruction stream. The stream case checks all four measured PC-exchange
+encodings: one opcode comes from the old continuation, while an operand for
+that opcode comes from the new destination. The LEAX loop case checks Z at a zero result and BNE
+fall-through. The software entry cases cover each discovered entry opcode
+and the saved return address. Timing measurements are tracked separately.
+The variable-shift cases check zero-count data preservation, selected count
+boundaries, 16-bit rotation independent of incoming C, and N/Z/V/C against
+the physical shift-vector matrix.
+The block case checks that Z follows the final U value and that one-element
+operations leave bytes beyond the destination untouched.
+The word-NEG case checks zero, positive, most-negative and minus-one inputs
+against the measured N/Z/V/C rule, including a memory operand.

@@ -49,8 +49,12 @@ LOOP2:
         BNE BAD
 
         TST <0          ; the service decreases this byte
-        BNE LOOP2
+        BEQ ALL_DONE
+        LDA #$20
+        STA TESTCTRL    ; request the next IRQ after main code has resumed
+        BRA LOOP2
 
+ALL_DONE:
         CMPS #RAMEND    ; S should be at the top
         BNE BAD
 
@@ -63,8 +67,6 @@ IRQ:
         STA TESTCTRL    ; Clear the IRQ
         LDX #0
         DEC ,X          ; leave a mark that we were here
-        LDA #$20        ; Sets the IRQ pin
-        STA TESTCTRL
         RTI
 NMI:
 

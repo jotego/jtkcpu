@@ -8,6 +8,13 @@ localparam [2:0] CC_C = 0,
                  CC_E = 7;
 
 localparam [7:0]
+    OP_RESET     = 8'h00,
+    OP_NMI       = 8'h02,
+    OP_FIRQ      = 8'h03,
+    OP_IRQ       = 8'h04,
+    LEAX05       = 8'h05,
+    LEAX06       = 8'h06,
+    LEAX07       = 8'h07,
     LEAX         = 8'h08,
     LEAY         = 8'h09,
     LEAU         = 8'h0A,
@@ -93,6 +100,7 @@ localparam [7:0]
     STY          = 8'h5A,
     STU          = 8'h5B,
     STS          = 8'h5C,
+    SOFT_SWI     = 8'h5D,
     BRA          = 8'h60,
     BHI          = 8'h61,
     BCC          = 8'h62,
@@ -205,4 +213,5 @@ localparam [7:0]
     ABSD         = 8'hCE,
     BSETA_X_U    = 8'hCF,
     BSETD_X_U    = 8'hD0,
+    CLR_NF       = 8'hD1,
     BSWI         = 8'hF0;  // JT specific, BRA and then SWI to IRQ

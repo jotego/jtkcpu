@@ -17,7 +17,7 @@ TESTCTRL EQU $1000
 RESET:
         LDA #$87
         ROLA            ;(1)0E
-        BVC BAD
+        BVS BAD         ; 053248 byte ROL preserves V
         BCC BAD
         ROLA            ;(0)1D
         BVS BAD
@@ -53,4 +53,3 @@ RESET:
 ; fill with zeros... up to interrupt table
         DC.B  [$FFFE-*]0
         FDB   RESET
-

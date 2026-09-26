@@ -59,6 +59,8 @@ wire [15:0] psh_addr;
 wire [15:0] nx_u, nx_s;
 wire [ 7:0] cc_out;
 wire [ 7:0] op, postbyte;
+wire [15:0] tfr_pc;
+wire        tfr_pc_we;
 wire [ 7:0] stack_bit, psh_sel, psh_mux;
 wire [ 3:0] intvec;
 wire [ 2:0] idx_sel;
@@ -71,7 +73,7 @@ wire        hihalf, branch, memhi, shd_en, int_en,
             dec_b, dec_x, incx, decu,
             clr_e, set_e, set_f, set_i;
 `ifdef VERILATOR_KEEP_CPU /* verilator tracing_on */  `endif
-wire        alu_busy, mem_busy, stack_busy, str_busy;
+wire        alu_busy, mem_busy, stack_busy, str_busy, div_extra;
 `ifdef VERILATOR_KEEP_CPU /* verilator tracing_off */ `endif
 
 // Indexed addressing
@@ -106,16 +108,20 @@ jtkcpu_ctrl u_ctrl(
     .str_busy     ( str_busy     ),
 
     .op           ( op           ),
+    .a            ( a            ),
     .mdata        ( mdata        ),
     .psh_bit      ( stack_bit    ),
     .cc           ( cc           ),
     .halt         ( halt         ),
     .up_pc        ( up_pc        ),
+    .tfr_pc       ( tfr_pc       ),
+    .tfr_pc_we    ( tfr_pc_we    ),
     .uz           ( uz           ),
 
     .up_tfr       ( up_tfr       ),
     .up_exg       ( up_exg       ),
     .up_div       ( up_div       ),
+    .div_extra    ( div_extra    ),
 
     .opnd0_mem    ( opnd0_mem    ),
     // Indexed addressing
@@ -197,6 +203,7 @@ jtkcpu_memctrl u_memctrl(
     .idx_adv      ( idx_adv      ),
 
     .pc           ( pc           ),
+    .tfr_pc_we    ( tfr_pc_we    ),
     .regs_x       ( x            ),
     .regs_y       ( y            ),
     .din          ( din          ),
@@ -240,6 +247,7 @@ jtkcpu_alu u_alu(
     .cc_in        ( cc           ),
     .cc_out       ( cc_out       ),
     .busy         ( alu_busy     ),
+    .div_extra    ( div_extra    ),
     // Special instructions
     .dec8         ( dec_b        ),
     .dec16        ( dec_x        ),
@@ -277,6 +285,8 @@ jtkcpu_regs u_regs(
 
     .up_exg       ( up_exg       ),
     .up_tfr       ( up_tfr       ),
+    .tfr_pc       ( tfr_pc       ),
+    .tfr_pc_we    ( tfr_pc_we    ),
 
     .psh_sel      ( psh_sel      ),
     .psh_hihalf   ( hihalf       ),

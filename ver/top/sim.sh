@@ -52,7 +52,7 @@ if [ ! -e "tests/$TEST".asm ]; then
     exit 1
 fi
 
-if ! ${ASPATH}asl -cpu 052001 tests/$TEST.asm -l > $ASLLOG; then
+if ! ${ASPATH}asl -cpu 053248 tests/$TEST.asm -l > $ASLLOG; then
     echo "${TEST}: "
     grep -A 2 error: $ASLLOG
     exit 1

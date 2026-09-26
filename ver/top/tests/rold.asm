@@ -24,12 +24,12 @@ RESET:  LEAS RAMEND
 
         LDD #$8000
         ROLD #9
-        CMPD #$0080
+        CMPD #$0100
         BNE BAD
 
         LDD #$4000
         ROLD #15
-        CMPD #$1000
+        CMPD #$2000
         BNE BAD
 
         include finish.inc

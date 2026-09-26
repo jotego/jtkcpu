@@ -44,6 +44,8 @@ module jtkcpu_regs(
     // Exchange / Transfer
     input               up_tfr,
     input               up_exg,
+    output       [15:0] tfr_pc,
+    output              tfr_pc_we,
 
     // MOVE/BSET
     input               up_move,
@@ -101,7 +103,7 @@ module jtkcpu_regs(
     output   reg [ 7:0] b,
     output   reg [ 7:0] cc,
     output   reg [ 7:0] dp,
-    output   reg        uz
+    output             uz
 );
 
 `include "jtkcpu.inc"
@@ -111,12 +113,15 @@ reg         psh_dec_u, psh_dec_s, inc_pul,
             up_pul_a, up_pul_b, up_pul_dp, up_pul_cc;
 reg  [ 7:0] psh_bit, pul_bit;
 reg  [15:0] stfr, dtfr;
+reg  [ 7:0] dp_low;
+wire        exchange;
 wire [15:0] psh_other;
 wire        idx_upx, idx_upy, idx_upu, idx_ups;
 wire [15:0] idx_step;
 wire        idx_x, idx_y, idx_u, idx_s;
 
 assign stack_bit = pul_en ? pul_bit : psh_bit;
+assign uz = u==0;
 assign psh_addr  = psh_ussel ? u : s;
 assign psh_other = psh_ussel ? s : u;
 // Indexed increments/decrements
@@ -139,26 +144,35 @@ assign idx_upx   = (idx_post || idx_pre) && idx_x,
 assign idx_step  = idx_post ? (idxw ? 16'd2 : 16'd1) : (idxw ? -16'd2 : -16'd1);
 
 // exg/tfr
+assign exchange  = (up_tfr || up_exg) && !mdata[7];
+assign tfr_pc_we = (up_tfr || up_exg) &&
+                   (mdata[6:4]==3'd7 || (exchange && mdata[2:0]==3'd7));
+assign tfr_pc    = mdata[6:4]==3'd7 ? stfr : dtfr;
+
 always @* begin
-    stfr = u;
-    dtfr = u;
+    stfr = 0;
+    dtfr = 0;
     case( mdata[6:4] )
-        3'b000:  dtfr[7:0] = a;
-        3'b001:  dtfr[7:0] = b;
+        3'b000:  dtfr = {b,a};
+        3'b001:  dtfr = {a,b};
         3'b010:  dtfr      = x;
         3'b011:  dtfr      = y;
-        3'b100:  dtfr      = s;
+        3'b100:  dtfr      = {dp,dp_low};
         3'b101:  dtfr      = u;
+        3'b110:  dtfr      = s;
+        3'b111:  dtfr      = pc;
         default:;
     endcase
 
     case( mdata[2:0] )
-        3'b000:  stfr[7:0] = a;
-        3'b001:  stfr[7:0] = b;
+        3'b000:  stfr = {b,a};
+        3'b001:  stfr = {a,b};
         3'b010:  stfr      = x;
         3'b011:  stfr      = y;
-        3'b100:  stfr      = s;
+        3'b100:  stfr      = {dp,dp_low};
         3'b101:  stfr      = u;
+        3'b110:  stfr      = s;
+        3'b111:  stfr      = pc;
         default:;
     endcase
 end
@@ -181,7 +195,7 @@ always @(posedge clk, posedge rst) begin
             CMPY_IMM, CMPY_IDX, STY, LMUL:  opnd0 <= y;
             CMPU_IMM, CMPU_IDX, STU:        opnd0 <= u;
             CMPS_IMM, CMPS_IDX, STS:        opnd0 <= s;
-            LEAX, LEAY, LEAU, LEAS:         opnd0 <= idx_addr;
+            LEAX, LEAX05, LEAX06, LEAX07, LEAY, LEAU, LEAS: opnd0 <= idx_addr;
 
             ANDCC, ORCC: opnd0 <= {a, cc};
 
@@ -307,14 +321,13 @@ always @(posedge clk, posedge rst) begin
         a  <= 0;
         b  <= 0;
         dp <= 0;
+        dp_low <= 0;
         x  <= 0;
         y  <= 0;
         u  <= 0;
         s  <= 0;
         cc <= 0;
-        uz <= 0;
     end else if(cen) begin
-        uz <= u==0;
         u <= nx_u;
         s <= nx_s;
         if( idx_upx ) x <= x + idx_step;
@@ -351,7 +364,8 @@ always @(posedge clk, posedge rst) begin
         if( up_move | incx ) x <= x + 16'd1;
         if( up_move        ) y <= y + 16'd1;
 
-        if( up_cc     ) cc <= alu_cc;
+        if( up_cc ) cc <= alu_cc;
+        if( up_move || decu ) cc[CC_Z] <= u==16'd1;
         if( up_pul_cc ) cc <= mdata[7:0];
         if( set_e ) cc[CC_E] <= 1;
         if( set_i & int_en ) cc[CC_I] <= 1;
@@ -364,19 +378,21 @@ always @(posedge clk, posedge rst) begin
                 1: b <= stfr[7:0];
                 2: x <= stfr;
                 3: y <= stfr;
-                4: s <= stfr;
+                4: {dp,dp_low} <= stfr;
                 5: u <= stfr;
+                6: s <= stfr;
                 default:;
             endcase
         end
-        if( up_exg ) begin
+        if( exchange ) begin
             case(mdata[2:0])
                 0: a <= dtfr[7:0];
                 1: b <= dtfr[7:0];
                 2: x <= dtfr;
                 3: y <= dtfr;
-                4: s <= dtfr;
+                4: {dp,dp_low} <= dtfr;
                 5: u <= dtfr;
+                6: s <= dtfr;
                 default:;
             endcase
         end

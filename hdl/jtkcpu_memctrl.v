@@ -26,6 +26,7 @@ module jtkcpu_memctrl(
 
     // inputs to address mux
     input      [15:0] pc,
+    input             tfr_pc_we,
     input      [15:0] idx_addr,
     input      [15:0] regs_x,
     input      [15:0] regs_y,
@@ -74,10 +75,12 @@ module jtkcpu_memctrl(
 
 localparam FIRQ = 16'hFFF6,
            IRQ  = 16'hFFF8,
+           SWI  = 16'hFFFA,
            NMI  = 16'hFFFC,
            RST  = 16'hFFFE;
 
-reg  is_int, hold, waitvec;
+reg  is_int, hold, waitvec, prefetch_pending;
+reg [15:0] prefetch_pc;
 wire mem_en;
 
 assign mem_en = fetch | opd | stack_busy | addrx | addry | idx_en;
@@ -92,9 +95,16 @@ always @(posedge clk, posedge rst) begin
         is_int <= 0;
         lines  <= 0;
         waitvec<= 0;
+        prefetch_pending <= 0;
+        prefetch_pc <= 0;
     end else if( cen2 && !halt ) begin
         // signals active for a single clock cycle:
         if( cen ) up_pc  <= 0;
+        if( cen && is_op && prefetch_pending ) prefetch_pending <= 0;
+        if( cen && tfr_pc_we ) begin
+            prefetch_pc <= pc;
+            prefetch_pending <= 1;
+        end
         we     <= 0;
         dout   <= psh_dec ? psh_mux :
                     memhi ? alu_dout[15:8] :
@@ -117,7 +127,7 @@ always @(posedge clk, posedge rst) begin
                 up_pc <= 1;
                 waitvec <= 1;
             end else if( mem_en ) begin
-                addr  <= pc;
+                addr  <= fetch && prefetch_pending ? prefetch_pc : pc;
                 is_op <= 1;
                 if( opd        ) begin is_op <= 0; end
                 if( psh_dec    ) begin
@@ -145,6 +155,7 @@ always @(posedge clk, posedge rst) begin
                     4'b0010: addr <= FIRQ;
                     4'b0100: addr <= NMI;
                     4'b1000: addr <= RST;
+                    4'b1111: addr <= SWI;
                     default:; // Leave code 0 free
                 endcase
             end

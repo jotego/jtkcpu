@@ -18,9 +18,7 @@
 
 ########### INTERRUPTS ####################
 RESET:              INT_EN, I=1, F=1
-                    NOP
-                    NOP
-                    NOP
+                    WAIT 3
                     NI
                     NOP
 
@@ -31,6 +29,7 @@ FIRQ:               E=0,PSH_CC, PSH_GO
                     NOP
                     INT_EN, E=0, F=1, I=1
                     NOP
+                    DYNWAIT
                     NI
 
 IRQ:                E=1, PSH_ALL, PSH_GO
@@ -38,6 +37,7 @@ IRQ:                E=1, PSH_ALL, PSH_GO
                     NOP
                     INT_EN, E=1, I=1
                     NOP
+                    DYNWAIT
                     NI
 
 NMI:                E=1, PSH_ALL, PSH_GO
@@ -45,6 +45,7 @@ NMI:                E=1, PSH_ALL, PSH_GO
                     NOP
                     INT_EN, E=1, I=1, F=1
                     NOP
+                    DYNWAIT
                     NI
 
 BRSWI:              OPD
@@ -67,6 +68,7 @@ IDX_R:              NOP
 IDX_RINC:           IDX_POST=1                  # 0 - R+
                     IDX_IND
 IDX_RINC2:          IDX_POST=1, IDXW=1          # 1 - R++ / [R++]
+                    NOP
                     IDX_IND
 IDX_RDEC:           IDX_PRE
                     IDX_IND                     # 2 -  -R
@@ -74,78 +76,122 @@ IDX_RDEC2:          IDXW=1
                     IDX_PRE
                     IDX_IND                     # 3 - --R
 IDX_OFFSET8:        OPD                         # 4 -  8-bit offset
+                    WAIT 5
                     IDX_8, IDX_IND
 IDX_OFFSET16:       OPD, MEMHI                  # 5 - 16-bit offset
                     OPD
+                    WAIT 5
                     IDX_16, IDX_IND
 IDX_IND:            IDX_EN, MEMHI               # 6 - ,R
                     IDX_EN, IDX_ADV
+                    WAIT 3
                     DATA2ADDR, IDX_RET
 IDX_EXT:            OPD, MEMHI                  # 7 Extended
                     OPD
+                    WAIT 4
                     DATA2ADDR, IDX_IND
 IDX_DP:             OPD                         # 1,4  - DP
+                    WAIT 3
                     IDX_DP, IDX_IND
 IDX_ACC:            NOP
+                    WAIT 2
                     IDX_ACC=1, IDX_IND          # 1,other  - A, B, X, Y, U, S or D
 IDX_UNK:            IDX_IND                     # Reserved indexed category; invalid modes normally buserror
 
 ########## ALU OPERATIONS ##################
 SINGLE_ALU:         OPD
+                    WAIT 3
                     UP_CC, UP_LD8
                     NI
 
 CMP8:               OPD
+                    WAIT 3
                     UP_CC
                     NI
 
 CMP8_IDX:           IDX_EN
+                    WAIT 5
                     UP_CC
                     NI
 
 SINGLE_ALU_16:      OPD, MEMHI
                     OPD
+                    WAIT 6
                     UP_CC, UP_LD16
                     NI
 
 SINGLE_ALUD:        OPD, MEMHI
                     OPD
+                    WAIT 7
                     UP_CC, UP_AB
                     NI
 
 SINGLE_ALUD_IDX:    IDX_EN, MEMHI
                     IDX_EN, IDX_ADV
+                    WAIT 8
                     UP_CC, UP_AB
                     NI
 
 CMP16:              OPD, MEMHI
                     OPD
+                    WAIT 6
                     UP_CC
                     NI
 
 CMP16_IDX:          IDX_EN, MEMHI
                     IDX_EN, IDX_ADV
+                    WAIT 8
                     UP_CC
                     NI
 
 SINGLE_A_INH:       UP_CC, UP_LDA
                     NI
 
+DAA_TIMED:          UP_CC, UP_LDA
+                    DYNWAIT
+                    NI
+
+SINGLE_A5:          NOP
+                    UP_CC, UP_LDA
+                    NI
+
 SINGLE_B_INH:       UP_CC, UP_LDB
                     NI
 
+SINGLE_B5:          NOP
+                    UP_CC, UP_LDB
+                    NI
+
 SINGLE_ALU_INH16:   UP_CC, UP_AB
+                    NI
+
+SINGLE_D5:          WAIT 1
+                    UP_CC, UP_AB
+                    NI
+
+SINGLE_D6:          WAIT 2
+                    UP_CC, UP_AB
+                    NI
+
+SINGLE_D7:          WAIT 3
+                    UP_CC, UP_AB
+                    NI
+
+SINGLE_D8:          WAIT 4
+                    UP_CC, UP_AB
                     NI
 
 SINGLE_ABX:         UP_ABX
                     NI
 
 SINGLE_ALU_IDX:     IDX_EN
+                    WAIT 5
                     UP_CC, UP_LD8
                     NI
 
 SINGLE_ALU_IDX16:   IDX_EN, MEMHI
                     IDX_EN, IDX_ADV
+                    WAIT 8
                     UP_CC, UP_LD16
                     NI
 
@@ -153,6 +199,21 @@ SHIFTD:             OPD
                     SHD_EN
                     NOP
                     UP_CC, UP_AB
+                    WAIT 6
+                    NI
+
+SHIFTD_R:           OPD
+                    SHD_EN
+                    NOP
+                    UP_CC, UP_AB
+                    WAIT 7
+                    NI
+
+SHIFTD_AR:          OPD
+                    SHD_EN
+                    NOP
+                    UP_CC, UP_AB
+                    WAIT 9
                     NI
 
 SHIFTD_IDX:         IDX_EN, MEMHI
@@ -162,39 +223,90 @@ SHIFTD_IDX:         IDX_EN, MEMHI
                     OPN0=MEM, UP_CC
                     IDX_EN, WE, MEMHI
                     IDX_EN, WE, IDX_ADV
-NOPE:               NI                      # NI SHARED WITH PREVIOUS CATEGORY
+                    WAIT 17
+                    NI
+
+SHIFTD_IDX_R:       IDX_EN, MEMHI
+                    IDX_EN, IDX_ADV
+                    IDX_EN, IDX_ADV, SHD_EN
+                    NOP
+                    OPN0=MEM, UP_CC
+                    IDX_EN, WE, MEMHI
+                    IDX_EN, WE, IDX_ADV
+                    WAIT 18
+                    NI
+
+SHIFTD_IDX_AR:      IDX_EN, MEMHI
+                    IDX_EN, IDX_ADV
+                    IDX_EN, IDX_ADV, SHD_EN
+                    NOP
+                    OPN0=MEM, UP_CC
+                    IDX_EN, WE, MEMHI
+                    IDX_EN, WE, IDX_ADV
+                    WAIT 20
+                    NI
+NOPE:               NOP
+                    NI
 
 MEM_ALU_IDX:        IDX_EN
+                    WAIT 5
                     OPN0=MEM, UP_CC, IDX_EN, WE
                     NI
 
 DIVIDE:             DIV_EN
-                    NOP
-                    NOP
+                    WAIT 2
                     UP_CC, UP_DIV
+                    DYNWAIT
                     NI
 
 WMEM_ALU:           IDX_EN, MEMHI
                     IDX_EN, IDX_ADV
+                    WAIT 15
                     OPN0=MEM,        IDX_EN, WE, MEMHI
                     OPN0=MEM, UP_CC, IDX_EN, WE, IDX_ADV
                     NI
 
-MULTIPLY:           NOP             # 11 cycles in 6809 (8 here)
+WMEM_TST:           IDX_EN, MEMHI
+                    IDX_EN, IDX_ADV
+                    WAIT 7
+                    OPN0=MEM,        IDX_EN, WE, MEMHI
+                    OPN0=MEM, UP_CC, IDX_EN, WE, IDX_ADV
+                    NI
+
+WMEM_CLR:           IDX_EN, MEMHI
+                    IDX_EN, IDX_ADV
+                    WAIT 8
+                    OPN0=MEM,        IDX_EN, WE, MEMHI
+                    OPN0=MEM, UP_CC, IDX_EN, WE, IDX_ADV
+                    NI
+
+WMEM_ASL:           IDX_EN, MEMHI
+                    IDX_EN, IDX_ADV
+                    WAIT 16
+                    OPN0=MEM,        IDX_EN, WE, MEMHI
+                    OPN0=MEM, UP_CC, IDX_EN, WE, IDX_ADV
+                    NI
+
+WMEM_RIGHT:         IDX_EN, MEMHI
+                    IDX_EN, IDX_ADV
+                    WAIT 17
+                    OPN0=MEM,        IDX_EN, WE, MEMHI
+                    OPN0=MEM, UP_CC, IDX_EN, WE, IDX_ADV
+                    NI
+
+MULTIPLY:           NOP
+                    WAIT 10
                     NOP
-                    NOP
-                    NOP             # 6th clock tick
                     UP_CC, UP_AB
                     NI
-                    NOP             # Leave this NOP
+                    NOP
 
-LMULTIPLY:          NOP             # 20+ cycles in original
+LMULTIPLY:          NOP
+                    WAIT 17
                     NOP
-                    NOP
-                    NOP             # 6th clock tick
-                    UP_CC, UP_LMUL  # Result goes to {X,Y}
+                    UP_CC, UP_LMUL
                     NI
-                    NOP             # Leave this NOP
+                    NOP
 
 ######### DECREMENT AND LOOP ##############
 LOOPX:              OPD,
@@ -210,60 +322,102 @@ LOOPB:              OPD
 ######### STRING OPERATIONS ##############
 MOVE:               ADDRY
                     WE,  ADDRX, UP_MOVE     # Y+, X+, U-
+                    WAIT 9
                     NI
+
+BMOVE_START:        WAIT 3
+                    NOP
+                    ADDRY
+                    WE, ADDRX, UP_MOVE
+                    WAIT 2
+                    NOP
+                    UC_LOOP
 
 BMOVE:              NIUZ
                     NOP
                     ADDRY
                     WE, ADDRX, UP_MOVE             # Y+, X+, U-
+                    WAIT 2
+                    UC_LOOP
+
+BSETA_START:        WAIT 3
+                    ADDRX, WE, INCX, DECU
+                    NOP
                     UC_LOOP
 
 BSETA:              NIUZ
-                    NOP
                     ADDRX, WE, INCX, DECU
+                    UC_LOOP
+
+BSETD_START:        WAIT 3
+                    NOP
+                    WE, ADDRX, INCX, DECU
+                    WE, ADDRX, INCX
+                    WAIT 2
+                    NOP
                     UC_LOOP
 
 BSETD:              NIUZ
                     NOP
                     WE, ADDRX, INCX, DECU
                     WE, ADDRX, INCX
+                    WAIT 2
                     UC_LOOP
 
 ############### LOAD/STORE OPERATIONS ############
 STORE8:             IDX_EN, WE, UP_CC
+                    WAIT 7
                     NI
 
 STORE16:            IDX_EN, WE, MEMHI
                     IDX_EN, WE, IDX_ADV, UP_CC
+                    WAIT 10
                     NI
 
 LEA:                UP_LEA, UP_CC
+                    WAIT 5
                     NI
 
 ############### MISC OPERATIONS ##################
 SETLNS:             OPD
+                    WAIT 5
                     UP_LINES, NI
 
 SETLNS_IDX:         IDX_EN
+                    WAIT 7
                     UP_LINES, NI
 
 EXCHANGE:           OPD
+                    WAIT 3
                     UP_EXG
                     NI
 
 TRANSFER:           OPD
+                    WAIT 3
                     UP_TFR
                     NI
 
 ############### FLOW CONTROL #####################
 SBRANCH:            OPD
                     PC=BRANCH8
+                    DYNWAIT
+                    NI
+
+BRA11:              OPD
+                    PC=BRANCH8
+                    WAIT 6
+                    NI
+
+BRN6:               OPD
+                    PC=BRANCH8
+                    NOP
                     NI
 
 SBSR:               OPD
                     PSH_PC, PSH_GO
                     NOP
                     PC=BRANCH8
+                    WAIT 10
                     NI
 
 BSRL:               OPD, MEMHI
@@ -271,41 +425,120 @@ BSRL:               OPD, MEMHI
                     PSH_PC, PSH_GO
                     NOP
                     PC=BRANCH16
+                    WAIT 11
                     NI
 
 LBRANCH:            OPD, MEMHI
                     OPD
                     PC=BRANCH16
+                    DYNWAIT
+                    NI
+
+LBRA13:             OPD, MEMHI
+                    OPD
+                    PC=BRANCH16
+                    WAIT 7
+                    NI
+
+LBRN7:              OPD, MEMHI
+                    OPD
+                    PC=BRANCH16
+                    NOP
                     NI
 
 JUMP:               PC_JMP
+                    WAIT 2
                     NI
 
 JMSR:               PSH_PC, PSH_GO
                     NOP
                     PC_JMP
+                    WAIT 8
                     NI
 
 RTIT:               RTI_CC, PUL_GO
                     NOP
                     RTI_OTHER, PUL_GO
                     NOP
+                    DYNWAIT
                     NI
 
 RTSR:               PSH_PC, PUL_GO
-                    NOP
-                    NOP
+                    WAIT 2
+                    WAIT 6
                     NI
 
 ############### STACK ##################
 PSH:                OPD
                     PSH_GO
-                    NOP
-                    NOP
+                    WAIT 2
+                    DYNWAIT
                     NI
 
 PUL:                OPD
                     PUL_GO
-                    NOP
-                    NOP
+                    WAIT 2
+                    DYNWAIT
+                    NI
+
+MEM_ALU_NF:         IDX_EN
+                    WAIT 6
+                    OPN0=MEM, IDX_EN, WE
+                    NI
+
+SINGLE_ALU9:        OPD
+                    WAIT 4
+                    UP_CC, UP_LD8
+                    NI
+
+CMP8_9:             OPD
+                    WAIT 4
+                    UP_CC
+                    NI
+
+CMPD13:             OPD, MEMHI
+                    OPD
+                    WAIT 7
+                    UP_CC
+                    NI
+
+IDX_ACCD:           NOP
+                    WAIT 4
+                    IDX_ACC=1, IDX_IND
+
+MEM_ALU_CLR:        IDX_EN
+                    WAIT 6
+                    OPN0=MEM, UP_CC, IDX_EN, WE
+                    NI
+
+MEM_ALU_OTHER:      IDX_EN
+                    WAIT 9
+                    OPN0=MEM, UP_CC, IDX_EN, WE
+                    NI
+
+MEM_ALU_ROL:        IDX_EN
+                    WAIT 10
+                    OPN0=MEM, UP_CC, IDX_EN, WE
+                    NI
+
+LEA05:              UP_LEA, UP_CC
+                    WAIT 11
+                    NI
+
+LEA06:              UP_LEA, UP_CC
+                    WAIT 9
+                    NI
+
+LEA07:              UP_LEA, UP_CC
+                    WAIT 7
+                    NI
+
+SINGLE_ALU_IDX_LOG: IDX_EN
+                    WAIT 6
+                    UP_CC, UP_LD8
+                    NI
+
+BIT8_IDX:           IDX_EN
+                    WAIT 6
+                    UP_CC
                     NI

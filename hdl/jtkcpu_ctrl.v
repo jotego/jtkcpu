@@ -24,18 +24,22 @@ module jtkcpu_ctrl(
     input      [15:0] mdata,
     input      [ 7:0] psh_bit,
     input      [ 7:0] op,
+    input      [ 7:0] a,
     input      [ 7:0] cc,
 
     input             halt,
 
     input             up_pc,
     input             up_pul_pc,
+    input      [15:0] tfr_pc,
+    input             tfr_pc_we,
 
      // System status
     input             irq_n,
     input             nmi_n,
     input             firq_n,
     input             alu_busy,
+    input             div_extra,
     input             mem_busy,
     input             uz,
 
@@ -112,7 +116,7 @@ module jtkcpu_ctrl(
 
 `include "jtkcpu.inc"
 
-wire branch,  niuz,   ni;
+wire branch,  niuz,   ni, soft_retry;
 wire pul_go,  psh_go, psh_all, psh_cc, psh_pc,
      up_ld16, up_ld8,  up_lda, up_ldb,  up_ab,
      rti_cc,  rti_other,
@@ -124,10 +128,12 @@ assign up_a    = ( up_ld8 && ~op[0] ) || up_lda;
 assign up_b    = ( up_ld8 &&  op[0] ) || up_ldb || up_div;
 
 assign up_d    = (up_ld16 && op[3:1]==0) || up_ab;
-assign up_x    = (up_ld16 && op[3:1]==1) || (up_lea && op[1:0]==LEAX[1:0]) || up_lmul || up_div;
-assign up_y    = (up_ld16 && op[3:1]==2) || (up_lea && op[1:0]==LEAY[1:0]) || up_lmul;
-assign up_u    = (up_ld16 && op[3:1]==3) || (up_lea && op[1:0]==LEAU[1:0]);
-assign up_s    = (up_ld16 && op[3:1]==4) || (up_lea && op[1:0]==LEAS[1:0]);
+assign up_x    = (up_ld16 && op[3:1]==1) ||
+                 (up_lea && (op==LEAX || op==LEAX05 || op==LEAX06 || op==LEAX07)) ||
+                 up_lmul || up_div;
+assign up_y    = (up_ld16 && op[3:1]==2) || (up_lea && op==LEAY) || up_lmul;
+assign up_u    = (up_ld16 && op[3:1]==3) || (up_lea && op==LEAU);
+assign up_s    = (up_ld16 && op[3:1]==4) || (up_lea && op==LEAS);
 assign pc_inc1 = idx_post && !idxw && idx_rsel==7;
 assign pc_inc2 = idx_post &&  idxw && idx_rsel==7;
 assign fetch   = ni || (niuz&&uz);
@@ -143,12 +149,14 @@ always @(posedge clk, posedge rst) begin
         bdone <= 0;
         pcbad <= 0;
     end else if(cen) begin
-        pc <= pc_jmp  ? idx_addr :
+        pc <= soft_retry ? pc-16'd1 :
+              pc_jmp  ? idx_addr :
               pc_step ? pc+16'd1 :
               pc_inc2 ? pc+16'd2 :
               sbranch && !bdone ? { {8{mdata[7]}}, mdata[7:0]}+pc :
               lbranch && !bdone ? mdata+pc :
-              up_pc        ? mdata    : pc;
+              up_pc        ? mdata    :
+              tfr_pc_we    ? tfr_pc-16'd1 : pc;
         if( buserror ) pcbad <= pc;
         bdone <= sbranch | lbranch;
         if( up_pul_pc && pul_en ) begin
@@ -167,11 +175,13 @@ jtkcpu_ucode u_ucode(
     .str_busy          ( str_busy          ),
 
     .cc                ( cc                ),
+    .a                 ( a                 ),
     .op                ( op                ),
     .mdata             ( mdata             ),
     .intsrv            ( intsrv            ),
 
     .alu_busy          ( alu_busy          ),
+    .div_extra         ( div_extra         ),
     .mem_busy          ( mem_busy          ),
     .stack_busy        ( stack_busy        ),
 
@@ -180,6 +190,7 @@ jtkcpu_ucode u_ucode(
     .nmi_n             ( nmi_n             ),
     .firq_n            ( firq_n            ),
     .intvec            ( intvec            ),
+    .soft_retry        ( soft_retry        ),
     .uz                ( uz                ),
 
     .addrx             ( addrx             ),
