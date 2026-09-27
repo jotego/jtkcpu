@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	MAX_ROUTINE = 32 // Must be power of 2
+	MAX_ROUTINE = 16 // Must be power of 2
 )
 
 type elements struct {
@@ -68,6 +68,8 @@ func get_mnemonics(f io.Reader) (all elements, assign string) {
 			found[each] = true
 		}
 	}
+	found["WAIT8_CALL"] = true
+	found["WAIT16_CALL"] = true
 	all_nem := make([]string, 0)
 	for k, _ := range found {
 		all_nem = append(all_nem, k)
@@ -117,10 +119,29 @@ func asm(f io.Reader, all elements) (rom []uint64) {
 		}
 		if strings.HasPrefix(strings.TrimSpace(line), "WAIT ") {
 			count, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "WAIT ")))
-			if err != nil || count < 1 || subidx+count-1 >= (MAX_ROUTINE-1) {
+			if err != nil || count < 1 {
 				log.Fatalf("Invalid wait at line %d while parsing %s", linecnt, cur_catname)
 			}
-			subidx += count - 1
+			steps := make([]uint64, 0, count)
+			for count >= 16 {
+				steps = append(steps, uint64(1)<<all.mnemonics["WAIT16_CALL"], 0)
+				count -= 16
+			}
+			if count >= 8 {
+				steps = append(steps, uint64(1)<<all.mnemonics["WAIT8_CALL"], 0)
+				count -= 8
+			}
+			for count > 0 {
+				steps = append(steps, 0)
+				count--
+			}
+			if subidx+len(steps)-1 >= MAX_ROUTINE-1 {
+				log.Fatalf("Subroutine overflow at line %d while parsing %s", linecnt, cur_catname)
+			}
+			for k, val := range steps {
+				rom[(cur_cat*MAX_ROUTINE)|(subidx+k)] = val
+			}
+			subidx += len(steps) - 1
 			continue
 		}
 		val := uint64(0)

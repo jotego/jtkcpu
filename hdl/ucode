@@ -542,3 +542,25 @@ BIT8_IDX:           IDX_EN
                     WAIT 6
                     UP_CC
                     NI
+
+WAIT8:              NOP
+                    NOP
+                    NOP
+                    NOP
+                    WAIT_RET
+                    NOP
+
+WAIT16:             NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    NOP
+                    WAIT_RET
+                    NOP

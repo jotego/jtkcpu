@@ -118,6 +118,7 @@ wire               idx_ret, idx_ind, idx_jmp,
                    set_idx_post, set_idx_acc, set_idxw;
 wire               cc_i, cc_f;
 wire               uc_loop, set_fake_irq, eff_irqn, dynwait, ni_raw;
+wire               wait8_call, wait16_call, wait_ret;
 wire        [2:0] stack_bytes, stack_words;
 wire        [5:0] stack_wait_count;
 reg                fake_irq, clr_fake_irq; // fake irq is used on the custom
@@ -127,6 +128,7 @@ reg                fake_irq, clr_fake_irq; // fake irq is used on the custom
 `include "jtkcpu.inc"
 `include "jtkcpu_ucode.inc"
 
+reg [UCODE_AW-1:0] wait_return;
 localparam [UCODE_AW-OPCAT_AW-1:0] OPLEN=0;
 
 assign cc_i = cc[CC_I];
@@ -385,6 +387,7 @@ always @(posedge clk) begin
         block_flush <= 0;
         br_ni_hold <= 0;
         br_ni_done <= 0;
+        wait_return <= 0;
     end else if( cen && !buserror ) begin
         nil        <= ni | niuzl;
         niuzl      <= niuz & uz;
@@ -488,6 +491,11 @@ always @(posedge clk) begin
             idxw       <= 0;
             addr       <= {nx_cat, OPLEN};
         end
+        if (wait8_call || wait16_call) begin
+            wait_return <= addr + 1'd1;
+            addr <= {wait16_call ? WAIT16 : WAIT8, OPLEN};
+        end
+        if (wait_ret) addr <= wait_return;
     end
 end
 
